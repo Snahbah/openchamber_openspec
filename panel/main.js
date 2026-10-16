@@ -2089,6 +2089,9 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
             "Deletion outcome is unknown; check the original project before retrying.",
             "unknown"
           );
+      },
+      init: async (directory) => {
+        await request("/init", { directory });
       }
     };
   }
@@ -2200,10 +2203,10 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
 
   // src/panel/workflow.ts
   var stages = [
-    { id: "planning", label: "Planning", action: "propose" },
-    { id: "ready", label: "Ready", action: "apply" },
-    { id: "progress", label: "In Progress", action: "continue" },
-    { id: "complete", label: "Complete", action: "archive" }
+    { id: "planning", label: "Planning", action: "Propose" },
+    { id: "ready", label: "Ready", action: "Apply" },
+    { id: "progress", label: "In Progress", action: "Continue" },
+    { id: "complete", label: "Complete", action: "Archive" }
   ];
   var workflowLabel = (stage) => stages.find((item) => item.id === stage).action;
   var stageLabel = (stage) => stages.find((item) => item.id === stage).label;
@@ -2216,12 +2219,12 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
     let state = null;
     let opened = null;
     const button2 = mountButton(buttonRoot, {
-      label: "propose",
+      label: "Propose",
       size: "sm",
       onClick: () => state?.action("primary")
     });
     const menu = mountMenu(menuRoot, {
-      label: "apply",
+      label: "Apply",
       size: "sm",
       variant: "default",
       items: [],
@@ -2303,6 +2306,7 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
   var paths = {
     refresh: "M20 11a8 8 0 1 1-2.4-5.7M20 4v5h-5",
     create: "M12 5v14M5 12h14",
+    setup: "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z",
     copy: "M9 9h11v11H9zM15 9V4H4v11h5",
     archive: "M3 4h18v4H3zM5 8v12h14V8M10 12h4",
     delete: "M4 7h16M10 4h4m4 3-1 13H7L6 7m4 4v5m4-5v5"
@@ -2371,16 +2375,25 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
     headingActions.className = "heading-actions";
     const newChangeRoot = document.createElement("span");
     const newChange = mountButton(newChangeRoot, {
-      label: "new change",
+      label: "New change",
       variant: "default",
       size: "sm",
       disabled: true,
       onClick: callbacks.create
     });
     addButtonIcon(newChangeRoot, "create");
+    const setupRoot = document.createElement("span");
+    const setup = mountButton(setupRoot, {
+      label: "Set-up",
+      variant: "secondary",
+      size: "sm",
+      disabled: true,
+      onClick: callbacks.setup
+    });
+    addButtonIcon(setupRoot, "setup");
     const archiveRoot = document.createElement("span");
     const archive = mountButton(archiveRoot, {
-      label: "archive all",
+      label: "Archive all",
       variant: "secondary",
       size: "sm",
       disabled: true,
@@ -2396,7 +2409,7 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
     const refreshRoot = document.createElement("span");
     refreshRoot.className = "refresh-control";
     const refresh = mountButton(refreshRoot, {
-      label: "refresh",
+      label: "Refresh",
       variant: "ghost",
       size: "sm",
       onClick: callbacks.retry
@@ -2404,7 +2417,7 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
     addButtonIcon(refreshRoot, "refresh");
     const helpRoot = document.createElement("span");
     const help = mountHelpButton(helpRoot, callbacks.help);
-    headingActions.append(helpRoot, refreshRoot, archiveRoot, newChangeRoot);
+    headingActions.append(helpRoot, refreshRoot, archiveRoot, setupRoot, newChangeRoot);
     const searchRoot = document.createElement("span");
     searchRoot.className = "board-search";
     let searchValue = "";
@@ -2468,14 +2481,14 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
         const action = mountPrimaryAction(actionRoot);
         const exploreRoot = document.createElement("span");
         const explore = mountButton(exploreRoot, {
-          label: "explore",
+          label: "Explore",
           variant: "secondary",
           size: "sm",
           onClick: () => cards.get(id)?.current.action("explore")
         });
         const verifyRoot = document.createElement("span");
         const verify = mountButton(verifyRoot, {
-          label: "verify",
+          label: "Verify",
           variant: "secondary",
           size: "sm",
           onClick: () => cards.get(id)?.current.action("verify")
@@ -2539,6 +2552,7 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
       update(state) {
         project.textContent = state.directory?.split("/").filter(Boolean).at(-1) ?? "No project selected";
         newChange.update({ disabled: !state.canCreate });
+        setup.update({ disabled: !state.directory || !!state.setupPending, loading: !!state.setupPending });
         archive.update({ disabled: !state.canArchive, loading: state.archivePending });
         if (searchValue !== state.search) {
           searchValue = state.search;
@@ -6269,7 +6283,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     const refreshRoot = document.createElement("span");
     refreshRoot.className = "refresh-control";
     const refresh = mountButton(refreshRoot, {
-      label: "refresh",
+      label: "Refresh",
       variant: "ghost",
       size: "sm",
       onClick: callbacks.refresh
@@ -6278,7 +6292,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     const deleteRoot = document.createElement("span");
     deleteRoot.className = "detail-delete";
     const deleteAction = mountButton(deleteRoot, {
-      label: "delete",
+      label: "Delete",
       variant: "destructive",
       size: "sm",
       onClick: callbacks.delete
@@ -6334,14 +6348,14 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     const action = mountPrimaryAction(actionRoot);
     const verifyRoot = document.createElement("span");
     const verify = mountButton(verifyRoot, {
-      label: "verify",
+      label: "Verify",
       variant: "secondary",
       size: "sm",
       onClick: () => callbacks.action("verify")
     });
     const exploreRoot = document.createElement("span");
     const explore = mountButton(exploreRoot, {
-      label: "explore",
+      label: "Explore",
       variant: "secondary",
       size: "sm",
       onClick: () => callbacks.action("explore")
@@ -6593,13 +6607,13 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     const inspectRoot = document.createElement("span");
     const forgetRoot = document.createElement("span");
     const dismiss = mountButton(cancelRoot, {
-      label: "cancel",
+      label: "Cancel",
       variant: "secondary",
       size: "sm",
       onClick: () => dialog.close()
     });
     const submit = mountButton(submitRoot, {
-      label: "create",
+      label: "Create",
       variant: "default",
       size: "sm",
       onClick: () => void submitChange()
@@ -6829,7 +6843,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       message.textContent = "";
     }
     const cancel = mountButton(cancelRoot, {
-      label: "cancel",
+      label: "Cancel",
       variant: "secondary",
       size: "sm",
       onClick: () => {
@@ -6845,7 +6859,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       }
     });
     const confirm = mountButton(deleteRoot, {
-      label: "delete",
+      label: "Delete",
       variant: "destructive",
       size: "sm",
       onClick: () => {
@@ -6862,7 +6876,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       deleteRoot.hidden = mode !== "confirming" && mode !== "deleting";
       cancel.update({
         disabled: mode === "deleting" || mode === "reconciling" || mode === "unresolved",
-        label: mode === "present" ? "Close" : "cancel"
+        label: mode === "present" ? "Close" : "Cancel"
       });
       confirm.update({ disabled: mode !== "confirming", loading: mode === "deleting" });
     }
@@ -6984,13 +6998,13 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       opener = null;
     }
     const cancel = mountButton(cancelRoot, {
-      label: "cancel",
+      label: "Cancel",
       variant: "secondary",
       size: "sm",
       onClick: close
     });
     const start = mountButton(startRoot, {
-      label: "start archiving",
+      label: "Start archiving",
       size: "sm",
       onClick: () => {
         if (!origin || origin !== callbacks.current() || !callbacks.canStart()) return;
@@ -7654,12 +7668,36 @@ Complete all remaining tasks in ${target}, then verify the implementation agains
         });
       }
     });
+    let setupPending = false;
+    async function runSetup() {
+      if (!directory || setupPending) return;
+      setupPending = true;
+      render();
+      try {
+        await client.init(directory);
+        await host2.toast({
+          kind: "success",
+          message: "OpenSpec initialised successfully with OpenCode tools."
+        });
+        loadBoard(true, true);
+      } catch (caught) {
+        await host2.toast({
+          kind: "error",
+          persistent: true,
+          message: caught instanceof Error ? caught.message : "Failed to initialise OpenSpec."
+        });
+      } finally {
+        setupPending = false;
+        render();
+      }
+    }
     const boardView = mountBoardView(appRoot, {
       archive: () => archiveView.open(),
       help: () => void openHelp(),
       create: () => {
         if (scope) createView.open();
       },
+      setup: () => void runSetup(),
       retry: () => loadBoard(true),
       search: (value) => {
         search = value;
@@ -7767,6 +7805,7 @@ Complete all remaining tasks in ${target}, then verify the implementation agains
         canCreate: !!scope,
         canArchive: canArchive(),
         archivePending,
+        setupPending,
         search,
         listedCount,
         completedTasks,

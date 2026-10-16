@@ -19,6 +19,7 @@ export type BoardState = {
   canCreate: boolean;
   canArchive: boolean;
   archivePending: boolean;
+  setupPending?: boolean;
   search: string;
   listedCount: number;
   completedTasks: number;
@@ -36,6 +37,7 @@ export function mountBoardView(
   callbacks: {
     create: () => void;
     archive: () => void;
+    setup: () => void;
     retry: () => void;
     search: (value: string) => void;
     help: () => void;
@@ -54,16 +56,25 @@ export function mountBoardView(
   headingActions.className = "heading-actions";
   const newChangeRoot = document.createElement("span");
   const newChange = mountButton(newChangeRoot, {
-    label: "new change",
+    label: "New change",
     variant: "default",
     size: "sm",
     disabled: true,
     onClick: callbacks.create,
   });
   addButtonIcon(newChangeRoot, "create");
+  const setupRoot = document.createElement("span");
+  const setup = mountButton(setupRoot, {
+    label: "Set-up",
+    variant: "secondary",
+    size: "sm",
+    disabled: true,
+    onClick: callbacks.setup,
+  });
+  addButtonIcon(setupRoot, "setup");
   const archiveRoot = document.createElement("span");
   const archive = mountButton(archiveRoot, {
-    label: "archive all",
+    label: "Archive all",
     variant: "secondary",
     size: "sm",
     disabled: true,
@@ -79,7 +90,7 @@ export function mountBoardView(
   const refreshRoot = document.createElement("span");
   refreshRoot.className = "refresh-control";
   const refresh = mountButton(refreshRoot, {
-    label: "refresh",
+    label: "Refresh",
     variant: "ghost",
     size: "sm",
     onClick: callbacks.retry,
@@ -87,7 +98,7 @@ export function mountBoardView(
   addButtonIcon(refreshRoot, "refresh");
   const helpRoot = document.createElement("span");
   const help = mountHelpButton(helpRoot, callbacks.help);
-  headingActions.append(helpRoot, refreshRoot, archiveRoot, newChangeRoot);
+  headingActions.append(helpRoot, refreshRoot, archiveRoot, setupRoot, newChangeRoot);
   const searchRoot = document.createElement("span");
   searchRoot.className = "board-search";
   let searchValue = "";
@@ -168,14 +179,14 @@ export function mountBoardView(
       const action = mountPrimaryAction(actionRoot);
       const exploreRoot = document.createElement("span");
       const explore = mountButton(exploreRoot, {
-        label: "explore",
+        label: "Explore",
         variant: "secondary",
         size: "sm",
         onClick: () => cards.get(id)?.current.action("explore"),
       });
       const verifyRoot = document.createElement("span");
       const verify = mountButton(verifyRoot, {
-        label: "verify",
+        label: "Verify",
         variant: "secondary",
         size: "sm",
         onClick: () => cards.get(id)?.current.action("verify"),
@@ -240,6 +251,7 @@ export function mountBoardView(
       project.textContent =
         state.directory?.split("/").filter(Boolean).at(-1) ?? "No project selected";
       newChange.update({ disabled: !state.canCreate });
+      setup.update({ disabled: !state.directory || !!state.setupPending, loading: !!state.setupPending });
       archive.update({ disabled: !state.canArchive, loading: state.archivePending });
       if (searchValue !== state.search) {
         searchValue = state.search;

@@ -61,9 +61,12 @@ export async function runOpenSpec(
   if (remainingMs <= 0)
     return { ok: false, error: serviceError("CLI_TIMEOUT", "OpenSpec request timed out.", 504) };
   return await new Promise((complete) => {
-    const child = spawn(options.binary ?? "openspec", [...args, "--json"], {
+    const isInit = args[0] === "init";
+    const cmdArgs = isInit ? args : [...args, "--json"];
+    const child = spawn(options.binary ?? "openspec", cmdArgs, {
       cwd: directory,
       stdio: ["ignore", "pipe", "pipe"],
+      shell: process.platform === "win32",
     });
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
@@ -117,6 +120,17 @@ export async function runOpenSpec(
     child.on("close", (code) => {
       if (fault) {
         finish({ ok: false, error: fault });
+        return;
+      }
+      if (isInit) {
+        if (code === 0) {
+          finish({ ok: true, value: { success: true } });
+        } else {
+          finish({
+            ok: false,
+            error: serviceError("OPENSPEC_ERROR", cliMessage(null, stderr), 422),
+          });
+        }
         return;
       }
       let value: unknown = null;

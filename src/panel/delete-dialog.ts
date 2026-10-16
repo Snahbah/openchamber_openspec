@@ -51,7 +51,7 @@ export function mountDeleteDialog(
     message.textContent = "";
   }
   const cancel = mountButton(cancelRoot, {
-    label: "cancel",
+    label: "Cancel",
     variant: "secondary",
     size: "sm",
     onClick: () => {
@@ -67,7 +67,7 @@ export function mountDeleteDialog(
     },
   });
   const confirm = mountButton(deleteRoot, {
-    label: "delete",
+    label: "Delete",
     variant: "destructive",
     size: "sm",
     onClick: () => {
@@ -84,7 +84,7 @@ export function mountDeleteDialog(
     deleteRoot.hidden = mode !== "confirming" && mode !== "deleting";
     cancel.update({
       disabled: mode === "deleting" || mode === "reconciling" || mode === "unresolved",
-      label: mode === "present" ? "Close" : "cancel",
+      label: mode === "present" ? "Close" : "Cancel",
     });
     confirm.update({ disabled: mode !== "confirming", loading: mode === "deleting" });
   }

@@ -27,13 +27,13 @@ export function mountArchiveDialog(
     opener = null;
   }
   const cancel = mountButton(cancelRoot, {
-    label: "cancel",
+    label: "Cancel",
     variant: "secondary",
     size: "sm",
     onClick: close,
   });
   const start = mountButton(startRoot, {
-    label: "start archiving",
+    label: "Start archiving",
     size: "sm",
     onClick: () => {
       if (!origin || origin !== callbacks.current() || !callbacks.canStart()) return;

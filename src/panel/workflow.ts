@@ -1,10 +1,10 @@
 import type { Stage } from "../model.js";
 
 export const stages: { id: Stage; label: string; action: string }[] = [
-  { id: "planning", label: "Planning", action: "propose" },
-  { id: "ready", label: "Ready", action: "apply" },
-  { id: "progress", label: "In Progress", action: "continue" },
-  { id: "complete", label: "Complete", action: "archive" },
+  { id: "planning", label: "Planning", action: "Propose" },
+  { id: "ready", label: "Ready", action: "Apply" },
+  { id: "progress", label: "In Progress", action: "Continue" },
+  { id: "complete", label: "Complete", action: "Archive" },
 ];
 
 export const workflowLabel = (stage: Stage) => stages.find((item) => item.id === stage)!.action;

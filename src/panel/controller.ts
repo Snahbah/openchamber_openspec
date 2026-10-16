@@ -685,12 +685,36 @@ export function mountController(host: HostClient, appRoot: HTMLElement): () => v
       void startArchive().catch(() => {});
     },
   });
+  let setupPending = false;
+  async function runSetup() {
+    if (!directory || setupPending) return;
+    setupPending = true;
+    render();
+    try {
+      await client.init(directory);
+      await host.toast({
+        kind: "success",
+        message: "OpenSpec initialised successfully with OpenCode tools.",
+      });
+      loadBoard(true, true);
+    } catch (caught) {
+      await host.toast({
+        kind: "error",
+        persistent: true,
+        message: caught instanceof Error ? caught.message : "Failed to initialise OpenSpec.",
+      });
+    } finally {
+      setupPending = false;
+      render();
+    }
+  }
   const boardView = mountBoardView(appRoot, {
     archive: () => archiveView.open(),
     help: () => void openHelp(),
     create: () => {
       if (scope) createView.open();
     },
+    setup: () => void runSetup(),
     retry: () => loadBoard(true),
     search: (value) => {
       search = value;
@@ -805,6 +829,7 @@ export function mountController(host: HostClient, appRoot: HTMLElement): () => v
       canCreate: !!scope,
       canArchive: canArchive(),
       archivePending,
+      setupPending,
       search,
       listedCount,
       completedTasks,

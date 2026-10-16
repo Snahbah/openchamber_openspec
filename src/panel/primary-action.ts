@@ -18,12 +18,12 @@ export function mountPrimaryAction(root: HTMLElement) {
   let state: State | null = null;
   let opened: State | null = null;
   const button = mountButton(buttonRoot, {
-    label: "propose",
+    label: "Propose",
     size: "sm",
     onClick: () => state?.action("primary"),
   });
   const menu = mountMenu(menuRoot, {
-    label: "apply",
+    label: "Apply",
     size: "sm",
     variant: "default",
     items: [],

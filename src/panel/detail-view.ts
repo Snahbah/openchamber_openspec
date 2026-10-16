@@ -125,7 +125,7 @@ export function mountDetailView(
   const refreshRoot = document.createElement("span");
   refreshRoot.className = "refresh-control";
   const refresh = mountButton(refreshRoot, {
-    label: "refresh",
+    label: "Refresh",
     variant: "ghost",
     size: "sm",
     onClick: callbacks.refresh,
@@ -134,7 +134,7 @@ export function mountDetailView(
   const deleteRoot = document.createElement("span");
   deleteRoot.className = "detail-delete";
   const deleteAction = mountButton(deleteRoot, {
-    label: "delete",
+    label: "Delete",
     variant: "destructive",
     size: "sm",
     onClick: callbacks.delete,
@@ -190,14 +190,14 @@ export function mountDetailView(
   const action = mountPrimaryAction(actionRoot);
   const verifyRoot = document.createElement("span");
   const verify = mountButton(verifyRoot, {
-    label: "verify",
+    label: "Verify",
     variant: "secondary",
     size: "sm",
     onClick: () => callbacks.action("verify"),
   });
   const exploreRoot = document.createElement("span");
   const explore = mountButton(exploreRoot, {
-    label: "explore",
+    label: "Explore",
     variant: "secondary",
     size: "sm",
     onClick: () => callbacks.action("explore"),

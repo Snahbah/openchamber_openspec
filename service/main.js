@@ -7450,9 +7450,12 @@ async function runOpenSpec(directory, args, remainingMs = COMMAND_TIMEOUT_MS, op
   if (remainingMs <= 0)
     return { ok: false, error: serviceError("CLI_TIMEOUT", "OpenSpec request timed out.", 504) };
   return await new Promise((complete) => {
-    const child = (0, import_node_child_process.spawn)(options.binary ?? "openspec", [...args, "--json"], {
+    const isInit = args[0] === "init";
+    const cmdArgs = isInit ? args : [...args, "--json"];
+    const child = (0, import_node_child_process.spawn)(options.binary ?? "openspec", cmdArgs, {
       cwd: directory,
-      stdio: ["ignore", "pipe", "pipe"]
+      stdio: ["ignore", "pipe", "pipe"],
+      shell: process.platform === "win32"
     });
     const stdout = [];
     const stderr = [];
@@ -7505,6 +7508,17 @@ async function runOpenSpec(directory, args, remainingMs = COMMAND_TIMEOUT_MS, op
     child.on("close", (code) => {
       if (fault) {
         finish({ ok: false, error: fault });
+        return;
+      }
+      if (isInit) {
+        if (code === 0) {
+          finish({ ok: true, value: { success: true } });
+        } else {
+          finish({
+            ok: false,
+            error: serviceError("OPENSPEC_ERROR", cliMessage(null, stderr), 422)
+          });
+        }
         return;
       }
       let value = null;
@@ -8037,7 +8051,12 @@ function createOpenSpecAdapter(run = runOpenSpec, remove = import_promises.rm) {
       throw caught;
     }
   }
-  return { changes, summaries, tasks, documentFor, createChange, deleteChange };
+  async function initProject(directory) {
+    if (!(0, import_node_path.isAbsolute)(directory))
+      return failure(serviceError("BAD_DIRECTORY", "Directory must be absolute."));
+    return await run(directory, ["init", "--tools", "opencode"]);
+  }
+  return { changes, summaries, tasks, documentFor, createChange, deleteChange, initProject };
 }
 
 // src/service/http.ts
@@ -8121,7 +8140,8 @@ function createOpenSpecService(token2, runner = runOpenSpec, options = {}) {
       if (expectedPlanning && (expectedPlanning.length > 4096 || expectedPlanning.includes("\0")))
         throw serviceError("BAD_REQUEST", "Invalid planning identity.");
       const path = new URL(request.url, "http://localhost").pathname;
-      const work = path === "/changes" ? adapter.changes(directory, expectedRoot, expectedPlanning) : path === "/summaries" ? adapter.summaries(directory, requiredString(body, "expectedRoot"), expectedPlanning) : path === "/tasks" ? adapter.tasks(
+      if (path === "/init") mutationDispatched = true;
+      const work = path === "/init" ? adapter.initProject(directory) : path === "/changes" ? adapter.changes(directory, expectedRoot, expectedPlanning) : path === "/summaries" ? adapter.summaries(directory, requiredString(body, "expectedRoot"), expectedPlanning) : path === "/tasks" ? adapter.tasks(
         directory,
         requiredString(body, "change"),
         requiredString(body, "expectedRoot"),

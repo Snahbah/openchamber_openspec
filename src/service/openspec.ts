@@ -660,5 +660,11 @@ export function createOpenSpecAdapter(run: CommandRunner = runOpenSpec, remove: 
     }
   }
 
-  return { changes, summaries, tasks, documentFor, createChange, deleteChange };
+  async function initProject(directory: string): Promise<CliResult> {
+    if (!isAbsolute(directory))
+      return failure(serviceError("BAD_DIRECTORY", "Directory must be absolute."));
+    return await run(directory, ["init", "--tools", "opencode"]);
+  }
+
+  return { changes, summaries, tasks, documentFor, createChange, deleteChange, initProject };
 }

@@ -67,13 +67,13 @@ export function mountCreateDialog(
   const inspectRoot = document.createElement("span");
   const forgetRoot = document.createElement("span");
   const dismiss = mountButton(cancelRoot, {
-    label: "cancel",
+    label: "Cancel",
     variant: "secondary",
     size: "sm",
     onClick: () => dialog.close(),
   });
   const submit = mountButton(submitRoot, {
-    label: "create",
+    label: "Create",
     variant: "default",
     size: "sm",
     onClick: () => void submitChange(),

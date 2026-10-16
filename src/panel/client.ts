@@ -228,6 +228,9 @@ export function createClient(host: HostClient) {
           "unknown",
         );
     },
+    init: async (directory: string): Promise<void> => {
+      await request("/init", { directory });
+    },
   };
 }
 

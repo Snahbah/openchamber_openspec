@@ -100,9 +100,12 @@ export function createOpenSpecService(
       if (expectedPlanning && (expectedPlanning.length > 4096 || expectedPlanning.includes("\0")))
         throw serviceError("BAD_REQUEST", "Invalid planning identity.");
       const path = new URL(request.url, "http://localhost").pathname;
+      if (path === "/init") mutationDispatched = true;
       const work =
-        path === "/changes"
-          ? adapter.changes(directory, expectedRoot, expectedPlanning)
+        path === "/init"
+          ? adapter.initProject(directory)
+          : path === "/changes"
+            ? adapter.changes(directory, expectedRoot, expectedPlanning)
           : path === "/summaries"
             ? adapter.summaries(directory, requiredString(body, "expectedRoot"), expectedPlanning)
             : path === "/tasks"
