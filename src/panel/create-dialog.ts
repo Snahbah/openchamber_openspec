@@ -1,5 +1,5 @@
 import { mountButton, mountTextField } from "@openchamber/sdk/ui";
-import { isChangeName } from "../model.js";
+import { isChangeName, slugifyChangeName } from "../model.js";
 import { ServiceRequestError, type Client, type Scope } from "./client.js";
 import { addButtonIcon } from "./button-icon.js";
 
@@ -39,8 +39,8 @@ export function mountCreateDialog(
   const nameField = mountTextField(nameRoot, {
     label: "Change name",
     value: "",
-    placeholder: "add-change-board",
-    mono: true,
+    placeholder: "e.g. Add user profile photo",
+    mono: false,
     onChange: (value) => {
       name = value;
       nameField.update({ value, error: undefined });
@@ -80,13 +80,13 @@ export function mountCreateDialog(
   });
   addButtonIcon(submitRoot, "create");
   const retry = mountButton(retryRoot, {
-    label: "Retry read",
+    label: "Try again",
     variant: "secondary",
     size: "sm",
     onClick: () => void reconcile(),
   });
   const inspect = mountButton(inspectRoot, {
-    label: "Inspect change",
+    label: "View change",
     variant: "secondary",
     size: "sm",
     onClick: () => {
@@ -96,7 +96,7 @@ export function mountCreateDialog(
     },
   });
   const forget = mountButton(forgetRoot, {
-    label: "Dismiss attempt",
+    label: "Discard",
     variant: "ghost",
     size: "sm",
     onClick: () => {
@@ -109,7 +109,7 @@ export function mountCreateDialog(
         discardDraft();
         if (mode === "read-failed") {
           attempt = originalAttempt;
-          messageText = "Creation outcome is unknown. Retry the read before creating again.";
+          messageText = "Could not confirm creation. Please try again.";
         } else mode = "editing";
         dialog.close();
         return;
@@ -165,7 +165,7 @@ export function mountCreateDialog(
     forget.update({ disabled: busy });
     const contextNotice =
       origin && !usable
-        ? ` Return to ${origin.directory} (OpenSpec root ${origin.root}) to inspect or submit in the original project.`
+        ? ` Return to ${origin.directory} to view or create in the original project.`
         : "";
     message.textContent = messageText + contextNotice;
     message.hidden = !message.textContent;
@@ -175,7 +175,7 @@ export function mountCreateDialog(
     const original = attempt;
     const currentGeneration = ++generation;
     mode = "reconciling";
-    messageText = "Checking the original project for a matching change…";
+    messageText = "Checking project for change…";
     paint();
     try {
       const listing = await client.list(
@@ -187,16 +187,16 @@ export function mountCreateDialog(
       if (listing.changes.some((entry) => entry.id === original.name)) {
         mode = "observed-existing";
         messageText =
-          "Creation outcome is unknown. An existing change with this name was found for inspection.";
+          "A change with this name already exists in this project.";
       } else {
         mode = "editing";
         messageText =
-          "Creation outcome is unknown. The original project was refreshed; no matching change was found.";
+          "Could not confirm creation. Please try again.";
       }
     } catch (caught) {
       if (disposed || currentGeneration !== generation) return;
       mode = "read-failed";
-      messageText = `Creation outcome is unknown. ${caught instanceof Error ? caught.message : "The original project could not be read."} Retry the read before creating again.`;
+      messageText = `Could not verify change: ${caught instanceof Error ? caught.message : "The project could not be read."}`;
     }
     paint();
   }
@@ -213,15 +213,19 @@ export function mountCreateDialog(
     }
     const submittedName = name.trim();
     const submittedGoal = goal.trim();
-    if (!isChangeName(submittedName)) {
-      nameField.update({ error: "Use lowercase letters or digits separated by single hyphens." });
+    const slugName = isChangeName(submittedName)
+      ? submittedName
+      : slugifyChangeName(submittedName);
+
+    if (!slugName || !isChangeName(slugName)) {
+      nameField.update({ error: "Please enter a valid name using letters or words." });
       return;
     }
     if (!submittedGoal) {
       goalField.update({ error: "Goal is required." });
       return;
     }
-    attempt = { scope: current, name: submittedName, goal: submittedGoal };
+    attempt = { scope: current, name: slugName, goal: submittedGoal };
     const original = attempt;
     const currentGeneration = ++generation;
     mode = "submitting";

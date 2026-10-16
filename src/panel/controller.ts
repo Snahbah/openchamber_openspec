@@ -269,22 +269,22 @@ export function mountController(host: HostClient, appRoot: HTMLElement): () => v
   }
 
   function actionPrompt(change: DerivedChange, intent: "primary" | "verify" | "explore"): string {
-    const target = `OpenSpec change "${change.id}"`;
+    const target = `change "${change.id}"`;
     const goal = change.goal?.trim() ? `\nGoal: ${change.goal}` : "";
     if (intent === "explore")
-      return `Use your skill tool to load and invoke the openspec-explore skill for ${target}.${goal}\n\nInvestigate the goal, relevant code, options and trade-offs for ${target}. Discuss findings without file changes or implementation. If no goal is recorded, inspect existing context and ask the user to clarify it if necessary; do not invent a goal.`;
+      return `Please explore ${target}.${goal}\n\nInvestigate what is needed, relevant files, architecture options, and trade-offs. Discuss findings and recommendations before making any changes.`;
     if (change.stage === "planning")
-      return `Use your skill tool to load and invoke the openspec-propose skill for ${target} (existing change).${goal}\n\nInspect ${target}'s status and current metadata. Preserve existing decisions and any recorded goal; only if current metadata has no goal, establish and record a concise goal from existing change context. Ask the user for clarification if the goal is unclear. Finish planning this existing scaffold and complete missing planning artefacts using OpenSpec's artefact instructions. Do not create another change or implement code. If the skill requires new-change creation, explain the conflict rather than creating another change.`;
+      return `Please plan ${target}.${goal}\n\nReview the change context and create the proposal, specifications, and task breakdown for ${target} using OpenSpec. Do not write the implementation code yet; let's agree on the plan and tasks first.`;
     if (change.stage === "ready" || change.stage === "progress") {
       const progress =
         change.stage === "progress"
-          ? `\n${change.completedTasks} of ${change.totalTasks} tasks complete. Pick up where implementation left off and complete the remaining tasks.`
+          ? `\n${change.completedTasks} of ${change.totalTasks} tasks currently complete.`
           : "";
-      return `Use your skill tool to load and invoke the openspec-apply-change skill for ${target}.${progress}\n\nComplete all remaining tasks in ${target}, then verify the implementation against its change artefacts. Resolve any issues found and verify again until all tasks are complete and verification passes. If blocked, report the blocker rather than marking unfinished work complete.`;
+      return `Please implement ${target}.${goal}${progress}\n\nWork through the remaining tasks in ${target}. Write the required code, run tests, and verify everything works as specified. If anything is blocked or needs a decision, ask.`;
     }
     if (intent === "verify")
-      return `Use your skill tool to load and invoke the openspec-verify-change skill for ${target}.`;
-    return `Use your skill tool to load and invoke the openspec-archive-change skill for ${target}.`;
+      return `Please verify and test ${target}.${goal}\n\nReview the implementation against the specifications and tasks for ${target}. Run tests and confirm all requirements are met.`;
+    return `Please mark ${target} as complete and archive it using OpenSpec.`;
   }
 
   async function preparePrompt(
@@ -318,7 +318,7 @@ export function mountController(host: HostClient, appRoot: HTMLElement): () => v
       if (scope !== captured || epoch !== originatingEpoch || sessionId !== expectedSession) return;
       await host.toast({
         kind: "success",
-        message: "Workflow prompt prepared in the open composer.",
+        message: "Prompt ready in chat. Press Enter to send to the assistant.",
       });
     } catch (caught) {
       if (scope !== captured || epoch !== originatingEpoch || sessionId !== expectedSession) return;
@@ -354,12 +354,12 @@ export function mountController(host: HostClient, appRoot: HTMLElement): () => v
       if (!current()) return;
       const listed = listing.changes.find((item) => item.id === change.id);
       if (!listed || (listed.totalTasks > 0 && listed.completedTasks === listed.totalTasks))
-        throw new Error("This change is no longer applicable. Refresh before starting Apply.");
+        throw new Error("This change is no longer applicable. Refresh before starting Build.");
       dispatched = true;
       const result = await host.startSession({
         providerId: "openspec-board",
         id: change.id,
-        title: `Apply ${change.id}`,
+        title: `Build ${change.id}`,
         url: "https://openspec.dev/docs/quickstart",
         projectId: project.id,
         worktree: { kind: "new", name: change.id },
@@ -369,15 +369,15 @@ export function mountController(host: HostClient, appRoot: HTMLElement): () => v
       knownSession = result.sessionId;
       if (!current()) return;
       const resource = result.worktree
-        ? ` Worktree ${result.worktree.name} at ${result.worktree.directory} is retained.`
+        ? ` Workspace ${result.worktree.name} is retained.`
         : "";
       if (!result.sessionId || result.sent !== "sent") {
         await host.toast({
           kind: "error",
           persistent: true,
           message: result.sessionId
-            ? `Session ${result.sessionId} exists, but Apply submission was not confirmed (${result.sent}).${resource} Inspect it before another attempt.`
-            : `Apply creation failed (${"failure" in result ? result.failure : "unknown"}).${resource} Inspect worktrees and sessions before another attempt.`,
+            ? `Session ${result.sessionId} exists, but Build submission was not confirmed (${result.sent}).${resource} Inspect it before another attempt.`
+            : `Build creation failed (${"failure" in result ? result.failure : "unknown"}).${resource} Inspect sessions before another attempt.`,
         });
         return;
       }
@@ -390,13 +390,13 @@ export function mountController(host: HostClient, appRoot: HTMLElement): () => v
         await host.toast({
           kind: "error",
           persistent: true,
-          message: `Session ${result.sessionId} was returned with an unexpected worktree result.${resource} Inspect it before another attempt.`,
+          message: `Session ${result.sessionId} was returned with an unexpected workspace result.${resource} Inspect it before another attempt.`,
         });
         return;
       }
       await host.toast({
         kind: result.linked === false ? "info" : "success",
-        message: `Apply submitted in session ${result.sessionId}.${result.linked === false ? " Its workflow reference could not be saved." : ""}`,
+        message: `Build submitted in session ${result.sessionId}.${result.linked === false ? " Its workflow reference could not be saved." : ""}`,
       });
       if (current()) await host.openSession(result.sessionId);
     } catch (caught) {
@@ -405,12 +405,12 @@ export function mountController(host: HostClient, appRoot: HTMLElement): () => v
         kind: "error",
         persistent: dispatched,
         message: knownSession
-          ? `Apply session ${knownSession} exists, but it could not be opened. Inspect that session; submission will not be repeated.`
+          ? `Build session ${knownSession} exists, but it could not be opened. Inspect that session.`
           : dispatched
-            ? `Apply launch outcome is uncertain. A worktree, session or sent prompt may already exist. Inspect worktrees and sessions before another attempt; this launch will not be retried automatically. ${caught instanceof Error ? caught.message : ""}`
+            ? `Build launch outcome is uncertain. A workspace or session may already exist. Inspect sessions before another attempt. ${caught instanceof Error ? caught.message : ""}`
             : caught instanceof Error
               ? caught.message
-              : "Worktree inspection failed. No creation was requested.",
+              : "Workspace inspection failed. No creation was requested.",
       });
     } finally {
       worktreePending.delete(key);

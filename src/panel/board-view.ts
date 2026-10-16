@@ -186,7 +186,7 @@ export function mountBoardView(
       });
       const verifyRoot = document.createElement("span");
       const verify = mountButton(verifyRoot, {
-        label: "Verify",
+        label: "Review",
         variant: "secondary",
         size: "sm",
         onClick: () => cards.get(id)?.current.action("verify"),

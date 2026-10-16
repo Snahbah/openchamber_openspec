@@ -1771,6 +1771,9 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
   function isChangeName(value) {
     return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
   }
+  function slugifyChangeName(value) {
+    return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  }
 
   // src/contracts.ts
   function decodePlanning(value) {
@@ -2203,8 +2206,8 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
 
   // src/panel/workflow.ts
   var stages = [
-    { id: "planning", label: "Planning", action: "Propose" },
-    { id: "ready", label: "Ready", action: "Apply" },
+    { id: "planning", label: "Planning", action: "Plan" },
+    { id: "ready", label: "Ready", action: "Build" },
     { id: "progress", label: "In Progress", action: "Continue" },
     { id: "complete", label: "Complete", action: "Archive" }
   ];
@@ -2219,12 +2222,12 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
     let state = null;
     let opened = null;
     const button2 = mountButton(buttonRoot, {
-      label: "Propose",
+      label: "Plan",
       size: "sm",
       onClick: () => state?.action("primary")
     });
     const menu = mountMenu(menuRoot, {
-      label: "Apply",
+      label: "Build",
       size: "sm",
       variant: "default",
       items: [],
@@ -2251,7 +2254,7 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
         menu.update({
           items: [
             { id: "current", label: "Prepare in current chat", disabled: next.disabled },
-            { id: "worktree", label: "Run in new worktree", disabled: next.disabled || next.pending }
+            { id: "worktree", label: "Run in new workspace", disabled: next.disabled || next.pending }
           ]
         });
         trigger.disabled = next.disabled;
@@ -2488,7 +2491,7 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
         });
         const verifyRoot = document.createElement("span");
         const verify = mountButton(verifyRoot, {
-          label: "Verify",
+          label: "Review",
           variant: "secondary",
           size: "sm",
           onClick: () => cards.get(id)?.current.action("verify")
@@ -6348,7 +6351,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     const action = mountPrimaryAction(actionRoot);
     const verifyRoot = document.createElement("span");
     const verify = mountButton(verifyRoot, {
-      label: "Verify",
+      label: "Review",
       variant: "secondary",
       size: "sm",
       onClick: () => callbacks.action("verify")
@@ -6579,8 +6582,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     const nameField = mountTextField(nameRoot, {
       label: "Change name",
       value: "",
-      placeholder: "add-change-board",
-      mono: true,
+      placeholder: "e.g. Add user profile photo",
+      mono: false,
       onChange: (value) => {
         name = value;
         nameField.update({ value, error: void 0 });
@@ -6620,13 +6623,13 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     });
     addButtonIcon(submitRoot, "create");
     const retry = mountButton(retryRoot, {
-      label: "Retry read",
+      label: "Try again",
       variant: "secondary",
       size: "sm",
       onClick: () => void reconcile()
     });
     const inspect = mountButton(inspectRoot, {
-      label: "Inspect change",
+      label: "View change",
       variant: "secondary",
       size: "sm",
       onClick: () => {
@@ -6636,7 +6639,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       }
     });
     const forget = mountButton(forgetRoot, {
-      label: "Dismiss attempt",
+      label: "Discard",
       variant: "ghost",
       size: "sm",
       onClick: () => {
@@ -6649,7 +6652,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
           discardDraft();
           if (mode === "read-failed") {
             attempt = originalAttempt;
-            messageText = "Creation outcome is unknown. Retry the read before creating again.";
+            messageText = "Could not confirm creation. Please try again.";
           } else mode = "editing";
           dialog.close();
           return;
@@ -6698,7 +6701,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       inspect.update({ disabled: mode !== "observed-existing" || !usable });
       forgetRoot.hidden = !attempt || busy || mode === "read-failed" && usable;
       forget.update({ disabled: busy });
-      const contextNotice = origin && !usable ? ` Return to ${origin.directory} (OpenSpec root ${origin.root}) to inspect or submit in the original project.` : "";
+      const contextNotice = origin && !usable ? ` Return to ${origin.directory} to view or create in the original project.` : "";
       message.textContent = messageText + contextNotice;
       message.hidden = !message.textContent;
     }
@@ -6707,7 +6710,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       const original = attempt;
       const currentGeneration = ++generation;
       mode = "reconciling";
-      messageText = "Checking the original project for a matching change\u2026";
+      messageText = "Checking project for change\u2026";
       paint();
       try {
         const listing = await client.list(
@@ -6718,15 +6721,15 @@ Please report this to https://github.com/markedjs/marked.`, e) {
         if (disposed || currentGeneration !== generation) return;
         if (listing.changes.some((entry) => entry.id === original.name)) {
           mode = "observed-existing";
-          messageText = "Creation outcome is unknown. An existing change with this name was found for inspection.";
+          messageText = "A change with this name already exists in this project.";
         } else {
           mode = "editing";
-          messageText = "Creation outcome is unknown. The original project was refreshed; no matching change was found.";
+          messageText = "Could not confirm creation. Please try again.";
         }
       } catch (caught) {
         if (disposed || currentGeneration !== generation) return;
         mode = "read-failed";
-        messageText = `Creation outcome is unknown. ${caught instanceof Error ? caught.message : "The original project could not be read."} Retry the read before creating again.`;
+        messageText = `Could not verify change: ${caught instanceof Error ? caught.message : "The project could not be read."}`;
       }
       paint();
     }
@@ -6739,15 +6742,16 @@ Please report this to https://github.com/markedjs/marked.`, e) {
       }
       const submittedName = name.trim();
       const submittedGoal = goal.trim();
-      if (!isChangeName(submittedName)) {
-        nameField.update({ error: "Use lowercase letters or digits separated by single hyphens." });
+      const slugName = isChangeName(submittedName) ? submittedName : slugifyChangeName(submittedName);
+      if (!slugName || !isChangeName(slugName)) {
+        nameField.update({ error: "Please enter a valid name using letters or words." });
         return;
       }
       if (!submittedGoal) {
         goalField.update({ error: "Goal is required." });
         return;
       }
-      attempt = { scope: current, name: submittedName, goal: submittedGoal };
+      attempt = { scope: current, name: slugName, goal: submittedGoal };
       const original = attempt;
       const currentGeneration = ++generation;
       mode = "submitting";
@@ -7040,13 +7044,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
   }
 
   // src/panel/archive-prompt.ts
-  var archiveAllPrompt = `Archive all completed OpenSpec changes in this session's project/worktree.
+  var archiveAllPrompt = `Archive all completed OpenSpec changes in this project.
 
-Run openspec list --json for a fresh active-change listing and resolve its OpenSpec planning context, honouring declared stores and the selected CLI root. Inspect each change with openspec status --change "<name>" --json and current CLI-reported task counts. Only changes with every applicable planning artefact done or explicitly skipped, a positive task total, and all tasks complete qualify. Skip unfinished, zero-task, unavailable or unreadable changes. Never use an incomplete-work warning override or infer successful verification from a Complete card or task counts.
-
-Use your skill tool to load and invoke the openspec-archive-change skill for each qualifying named change sequentially. Recheck completion before each archive and assess spec sync against the current main specs after any preceding archive. Preserve the skill's prerequisites, sync assessment, user choices and blockers; ask its required questions rather than treating this bulk request as permission to bypass them. Do not implement unfinished work or automatically resolve blockers.
-
-Report archived, skipped and blocked changes with reasons. If none qualify, make no OpenSpec mutations and report that outcome.`;
+1. List active changes using OpenSpec and identify those where all tasks and planning documents are complete.
+2. For each fully completed change, archive it using 'openspec archive <name>'.
+3. Report which changes were archived, and list any changes that remain incomplete or blocked.`;
 
   // src/panel/worktree.ts
   async function ready(read, subscribe) {
@@ -7350,27 +7352,29 @@ Report archived, skipped and blocked changes with reasons. If none qualify, make
       })();
     }
     function actionPrompt(change, intent) {
-      const target = `OpenSpec change "${change.id}"`;
+      const target = `change "${change.id}"`;
       const goal = change.goal?.trim() ? `
 Goal: ${change.goal}` : "";
       if (intent === "explore")
-        return `Use your skill tool to load and invoke the openspec-explore skill for ${target}.${goal}
+        return `Please explore ${target}.${goal}
 
-Investigate the goal, relevant code, options and trade-offs for ${target}. Discuss findings without file changes or implementation. If no goal is recorded, inspect existing context and ask the user to clarify it if necessary; do not invent a goal.`;
+Investigate what is needed, relevant files, architecture options, and trade-offs. Discuss findings and recommendations before making any changes.`;
       if (change.stage === "planning")
-        return `Use your skill tool to load and invoke the openspec-propose skill for ${target} (existing change).${goal}
+        return `Please plan ${target}.${goal}
 
-Inspect ${target}'s status and current metadata. Preserve existing decisions and any recorded goal; only if current metadata has no goal, establish and record a concise goal from existing change context. Ask the user for clarification if the goal is unclear. Finish planning this existing scaffold and complete missing planning artefacts using OpenSpec's artefact instructions. Do not create another change or implement code. If the skill requires new-change creation, explain the conflict rather than creating another change.`;
+Review the change context and create the proposal, specifications, and task breakdown for ${target} using OpenSpec. Do not write the implementation code yet; let's agree on the plan and tasks first.`;
       if (change.stage === "ready" || change.stage === "progress") {
         const progress = change.stage === "progress" ? `
-${change.completedTasks} of ${change.totalTasks} tasks complete. Pick up where implementation left off and complete the remaining tasks.` : "";
-        return `Use your skill tool to load and invoke the openspec-apply-change skill for ${target}.${progress}
+${change.completedTasks} of ${change.totalTasks} tasks currently complete.` : "";
+        return `Please implement ${target}.${goal}${progress}
 
-Complete all remaining tasks in ${target}, then verify the implementation against its change artefacts. Resolve any issues found and verify again until all tasks are complete and verification passes. If blocked, report the blocker rather than marking unfinished work complete.`;
+Work through the remaining tasks in ${target}. Write the required code, run tests, and verify everything works as specified. If anything is blocked or needs a decision, ask.`;
       }
       if (intent === "verify")
-        return `Use your skill tool to load and invoke the openspec-verify-change skill for ${target}.`;
-      return `Use your skill tool to load and invoke the openspec-archive-change skill for ${target}.`;
+        return `Please verify and test ${target}.${goal}
+
+Review the implementation against the specifications and tasks for ${target}. Run tests and confirm all requirements are met.`;
+      return `Please mark ${target} as complete and archive it using OpenSpec.`;
     }
     async function preparePrompt(change, captured, originatingEpoch, intent, originatingSession = sessionId) {
       const current = changes.find((item) => item.id === change.id);
@@ -7387,7 +7391,7 @@ Complete all remaining tasks in ${target}, then verify the implementation agains
         if (scope !== captured || epoch !== originatingEpoch || sessionId !== expectedSession) return;
         await host2.toast({
           kind: "success",
-          message: "Workflow prompt prepared in the open composer."
+          message: "Prompt ready in chat. Press Enter to send to the assistant."
         });
       } catch (caught) {
         if (scope !== captured || epoch !== originatingEpoch || sessionId !== expectedSession) return;
@@ -7413,12 +7417,12 @@ Complete all remaining tasks in ${target}, then verify the implementation agains
         if (!current()) return;
         const listed = listing.changes.find((item) => item.id === change.id);
         if (!listed || listed.totalTasks > 0 && listed.completedTasks === listed.totalTasks)
-          throw new Error("This change is no longer applicable. Refresh before starting Apply.");
+          throw new Error("This change is no longer applicable. Refresh before starting Build.");
         dispatched = true;
         const result = await host2.startSession({
           providerId: "openspec-board",
           id: change.id,
-          title: `Apply ${change.id}`,
+          title: `Build ${change.id}`,
           url: "https://openspec.dev/docs/quickstart",
           projectId: project.id,
           worktree: { kind: "new", name: change.id },
@@ -7427,12 +7431,12 @@ Complete all remaining tasks in ${target}, then verify the implementation agains
         });
         knownSession = result.sessionId;
         if (!current()) return;
-        const resource = result.worktree ? ` Worktree ${result.worktree.name} at ${result.worktree.directory} is retained.` : "";
+        const resource = result.worktree ? ` Workspace ${result.worktree.name} is retained.` : "";
         if (!result.sessionId || result.sent !== "sent") {
           await host2.toast({
             kind: "error",
             persistent: true,
-            message: result.sessionId ? `Session ${result.sessionId} exists, but Apply submission was not confirmed (${result.sent}).${resource} Inspect it before another attempt.` : `Apply creation failed (${"failure" in result ? result.failure : "unknown"}).${resource} Inspect worktrees and sessions before another attempt.`
+            message: result.sessionId ? `Session ${result.sessionId} exists, but Build submission was not confirmed (${result.sent}).${resource} Inspect it before another attempt.` : `Build creation failed (${"failure" in result ? result.failure : "unknown"}).${resource} Inspect sessions before another attempt.`
           });
           return;
         }
@@ -7440,13 +7444,13 @@ Complete all remaining tasks in ${target}, then verify the implementation agains
           await host2.toast({
             kind: "error",
             persistent: true,
-            message: `Session ${result.sessionId} was returned with an unexpected worktree result.${resource} Inspect it before another attempt.`
+            message: `Session ${result.sessionId} was returned with an unexpected workspace result.${resource} Inspect it before another attempt.`
           });
           return;
         }
         await host2.toast({
           kind: result.linked === false ? "info" : "success",
-          message: `Apply submitted in session ${result.sessionId}.${result.linked === false ? " Its workflow reference could not be saved." : ""}`
+          message: `Build submitted in session ${result.sessionId}.${result.linked === false ? " Its workflow reference could not be saved." : ""}`
         });
         if (current()) await host2.openSession(result.sessionId);
       } catch (caught) {
@@ -7454,7 +7458,7 @@ Complete all remaining tasks in ${target}, then verify the implementation agains
         await host2.toast({
           kind: "error",
           persistent: dispatched,
-          message: knownSession ? `Apply session ${knownSession} exists, but it could not be opened. Inspect that session; submission will not be repeated.` : dispatched ? `Apply launch outcome is uncertain. A worktree, session or sent prompt may already exist. Inspect worktrees and sessions before another attempt; this launch will not be retried automatically. ${caught instanceof Error ? caught.message : ""}` : caught instanceof Error ? caught.message : "Worktree inspection failed. No creation was requested."
+          message: knownSession ? `Build session ${knownSession} exists, but it could not be opened. Inspect that session.` : dispatched ? `Build launch outcome is uncertain. A workspace or session may already exist. Inspect sessions before another attempt. ${caught instanceof Error ? caught.message : ""}` : caught instanceof Error ? caught.message : "Workspace inspection failed. No creation was requested."
         });
       } finally {
         worktreePending.delete(key);

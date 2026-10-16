@@ -18,12 +18,12 @@ export function mountPrimaryAction(root: HTMLElement) {
   let state: State | null = null;
   let opened: State | null = null;
   const button = mountButton(buttonRoot, {
-    label: "Propose",
+    label: "Plan",
     size: "sm",
     onClick: () => state?.action("primary"),
   });
   const menu = mountMenu(menuRoot, {
-    label: "Apply",
+    label: "Build",
     size: "sm",
     variant: "default",
     items: [],
@@ -57,7 +57,7 @@ export function mountPrimaryAction(root: HTMLElement) {
       menu.update({
         items: [
           { id: "current", label: "Prepare in current chat", disabled: next.disabled },
-          { id: "worktree", label: "Run in new worktree", disabled: next.disabled || next.pending },
+          { id: "worktree", label: "Run in new workspace", disabled: next.disabled || next.pending },
         ],
       });
       trigger.disabled = next.disabled;

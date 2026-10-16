@@ -190,7 +190,7 @@ export function mountDetailView(
   const action = mountPrimaryAction(actionRoot);
   const verifyRoot = document.createElement("span");
   const verify = mountButton(verifyRoot, {
-    label: "Verify",
+    label: "Review",
     variant: "secondary",
     size: "sm",
     onClick: () => callbacks.action("verify"),

@@ -66,3 +66,12 @@ export function deriveChange(change: ChangeSummary): DerivedChange {
 export function isChangeName(value: string): boolean {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
 }
+
+export function slugifyChangeName(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
