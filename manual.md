@@ -70,8 +70,30 @@ The buttons on each card help you guide the AI assistant:
 
 ---
 
-## 6. Helpful Tips
+---
+
+## 6. Easy Chat Commands (Slash Commands)
+
+If you prefer typing directly into the chat rather than clicking board buttons, you can use these simple commands. Just type `/spec` to see the full list:
+
+| Command | What it does | Example |
+| :--- | :--- | :--- |
+| `/spec-plan <name>` | Plans a new feature, generating specifications and tasks before writing code. | `/spec-plan dark-mode-toggle` |
+| `/spec-build <name>` | Builds and implements the tasks for a planned change. | `/spec-build dark-mode-toggle` |
+| `/spec-review <name>` | Reviews and tests that the code matches the plan before finishing. | `/spec-review dark-mode-toggle` |
+| `/spec-explore` | Brainstorms ideas and options with the AI before deciding on a plan. | `/spec-explore` |
+| `/spec-archive <name>` | Archives a completed change and marks it done. | `/spec-archive dark-mode-toggle` |
+| `/spec-update <name>` | Revises an existing plan when requirements change. | `/spec-update dark-mode-toggle` |
+| `/spec-sync` | Updates the main project documentation with the new changes. | `/spec-sync` |
+
+> [!TIP]
+> All commands start with `/spec-` so you only need to remember one prefix. Typing `/spec` into the chat box immediately brings up all available actions.
+
+---
+
+## 7. Helpful Tips
 
 - **Keep goals focused:** One feature per card works best (e.g. "Add contact form" rather than "Build entire website").
 - **Review before building:** Read the plan that the AI produces during the **Plan** stage. If something looks wrong, tell the AI in the chat to adjust it before clicking **Build**.
 - **Don't panic if something is interrupted:** You can always click **Refresh** to see current progress, and **Continue** to pick up where you left off.
+
