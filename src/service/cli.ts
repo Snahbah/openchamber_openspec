@@ -1,4 +1,6 @@
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
 const COMMAND_TIMEOUT_MS = 15_000;
 const STDOUT_BYTES = 1024 * 1024;
@@ -63,10 +65,26 @@ export async function runOpenSpec(
   return await new Promise((complete) => {
     const isInit = args[0] === "init";
     const cmdArgs = isInit ? args : [...args, "--json"];
-    const child = spawn(options.binary ?? "openspec", cmdArgs, {
+    let bin = options.binary ?? "openspec";
+    let prefixArgs: string[] = [];
+    let useShell = process.platform === "win32";
+
+    if (process.platform === "win32" && !options.binary) {
+      const globalJs = process.env.APPDATA
+        ? join(process.env.APPDATA, "npm", "node_modules", "@fission-ai", "openspec", "bin", "openspec.js")
+        : "";
+      if (globalJs && existsSync(globalJs)) {
+        bin = process.execPath;
+        prefixArgs = [globalJs];
+        useShell = false;
+      }
+    }
+
+    const finalArgs = [...prefixArgs, ...cmdArgs];
+    const child = spawn(bin, finalArgs, {
       cwd: directory,
       stdio: ["ignore", "pipe", "pipe"],
-      shell: process.platform === "win32",
+      shell: useShell,
     });
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
