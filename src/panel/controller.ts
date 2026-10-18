@@ -10,6 +10,7 @@ import { mountDeleteDialog } from "./delete-dialog.js";
 import { mountArchiveDialog } from "./archive-dialog.js";
 import { archiveAllPrompt } from "./archive-prompt.js";
 import { inspectWorktreeDestination } from "./worktree.js";
+import { mountGuideDialog } from "./guide-dialog.js";
 
 export function mountController(host: HostClient, appRoot: HTMLElement): () => void {
   const client = createClient(host);
@@ -603,15 +604,8 @@ export function mountController(host: HostClient, appRoot: HTMLElement): () => v
       loadBoard(true, true);
     },
   });
-  async function openHelp() {
-    try {
-      await host.openUrl("https://openspec.dev/docs/quickstart");
-    } catch (caught) {
-      await host.toast({
-        kind: "error",
-        message: caught instanceof HostRequestError ? caught.message : "Cannot open quickstart",
-      });
-    }
+  function openHelp() {
+    guideDialog.open();
   }
   function canArchive() {
     return (
@@ -708,13 +702,17 @@ export function mountController(host: HostClient, appRoot: HTMLElement): () => v
       render();
     }
   }
+  const guideDialog = mountGuideDialog(appRoot, {
+    setup: () => void runSetup(),
+    canSetup: () => !scope && !!directory && !setupPending,
+  });
   const boardView = mountBoardView(appRoot, {
     archive: () => archiveView.open(),
-    help: () => void openHelp(),
+    help: () => openHelp(),
+    guide: () => openHelp(),
     create: () => {
       if (scope) createView.open();
     },
-    setup: () => void runSetup(),
     retry: () => loadBoard(true),
     search: (value) => {
       search = value;
@@ -918,6 +916,7 @@ export function mountController(host: HostClient, appRoot: HTMLElement): () => v
     deleteView.dispose();
     createView.dispose();
     archiveView.dispose();
+    guideDialog.dispose();
     detailRoot.remove();
   };
 }

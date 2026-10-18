@@ -5,6 +5,7 @@ const paths = {
   copy: "M9 9h11v11H9zM15 9V4H4v11h5",
   archive: "M3 4h18v4H3zM5 8v12h14V8M10 12h4",
   delete: "M4 7h16M10 4h4m4 3-1 13H7L6 7m4 4v5m4-5v5",
+  guide: "M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z M6 6h10 M6 10h10",
 } as const;
 
 export function addButtonIcon(root: HTMLElement, name: keyof typeof paths) {

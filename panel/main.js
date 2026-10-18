@@ -2312,7 +2312,8 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
     setup: "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z",
     copy: "M9 9h11v11H9zM15 9V4H4v11h5",
     archive: "M3 4h18v4H3zM5 8v12h14V8M10 12h4",
-    delete: "M4 7h16M10 4h4m4 3-1 13H7L6 7m4 4v5m4-5v5"
+    delete: "M4 7h16M10 4h4m4 3-1 13H7L6 7m4 4v5m4-5v5",
+    guide: "M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z M6 6h10 M6 10h10"
   };
   function addButtonIcon(root2, name) {
     root2.classList.add("loading-action");
@@ -2385,15 +2386,15 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
       onClick: callbacks.create
     });
     addButtonIcon(newChangeRoot, "create");
-    const setupRoot = document.createElement("span");
-    const setup = mountButton(setupRoot, {
-      label: "Set-up",
+    const guideRoot = document.createElement("span");
+    const guide = mountButton(guideRoot, {
+      label: "Guide",
       variant: "secondary",
       size: "sm",
-      disabled: true,
-      onClick: callbacks.setup
+      disabled: false,
+      onClick: callbacks.guide
     });
-    addButtonIcon(setupRoot, "setup");
+    addButtonIcon(guideRoot, "guide");
     const archiveRoot = document.createElement("span");
     const archive = mountButton(archiveRoot, {
       label: "Archive all",
@@ -2420,7 +2421,7 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
     addButtonIcon(refreshRoot, "refresh");
     const helpRoot = document.createElement("span");
     const help = mountHelpButton(helpRoot, callbacks.help);
-    headingActions.append(helpRoot, refreshRoot, archiveRoot, setupRoot, newChangeRoot);
+    headingActions.append(helpRoot, refreshRoot, archiveRoot, guideRoot, newChangeRoot);
     const searchRoot = document.createElement("span");
     searchRoot.className = "board-search";
     let searchValue = "";
@@ -2555,7 +2556,7 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
       update(state) {
         project.textContent = state.directory?.split("/").filter(Boolean).at(-1) ?? "No project selected";
         newChange.update({ disabled: !state.canCreate });
-        setup.update({ disabled: !state.directory || !!state.setupPending, loading: !!state.setupPending });
+        guide.update({ disabled: false });
         archive.update({ disabled: !state.canArchive, loading: state.archivePending });
         if (searchValue !== state.search) {
           searchValue = state.search;
@@ -2645,6 +2646,7 @@ textarea.oc-sdk-input { height: auto; padding: 8px 12px; resize: vertical; }
         }
         cards.clear();
         newChange.dispose();
+        guide.dispose();
         archive.dispose();
         refresh.dispose();
         help.dispose();
@@ -7131,6 +7133,152 @@ Please report this to https://github.com/markedjs/marked.`, e) {
     return project;
   }
 
+  // src/panel/guide-dialog.ts
+  function mountGuideDialog(root2, callbacks) {
+    const dialog = document.createElement("dialog");
+    dialog.className = "guide-dialog";
+    dialog.style.width = "min(640px, calc(100vw - 32px))";
+    dialog.style.maxHeight = "85vh";
+    dialog.style.overflowY = "auto";
+    dialog.style.padding = "20px";
+    dialog.style.border = "1px solid var(--oc-border, #30363c)";
+    dialog.style.borderRadius = "10px";
+    dialog.style.background = "var(--oc-bg, #15191c)";
+    dialog.style.color = "inherit";
+    const heading = document.createElement("h2");
+    heading.id = "guide-title";
+    heading.style.marginTop = "0";
+    heading.style.marginBottom = "8px";
+    heading.textContent = "OpenSpec Aid-M\xE9moire & Command Guide";
+    dialog.setAttribute("aria-labelledby", heading.id);
+    const intro = document.createElement("p");
+    intro.style.fontSize = "13px";
+    intro.style.color = "var(--oc-muted, #a0a9b1)";
+    intro.style.marginTop = "0";
+    intro.style.marginBottom = "16px";
+    intro.textContent = "Quick reference for starting repositories, co-authoring PRDs, and running tasks on the OpenSpec Board.";
+    const commandsTitle = document.createElement("h3");
+    commandsTitle.style.fontSize = "14px";
+    commandsTitle.style.margin = "14px 0 8px";
+    commandsTitle.textContent = "Essential Slash Commands";
+    const commandsList = document.createElement("div");
+    commandsList.style.display = "grid";
+    commandsList.style.gap = "8px";
+    commandsList.style.fontSize = "13px";
+    const commands = [
+      {
+        cmd: "/blueprint [Client] [Name]",
+        desc: "Scaffold new repo, claim Job ID (e.g. TS181), seed PRD-01, set Git guard, and stage initial card."
+      },
+      {
+        cmd: "/prd-draft [path]",
+        desc: "Co-author a PRD through a 4-question plain English interview with the AI."
+      },
+      {
+        cmd: "/spec-from-prd [path]",
+        desc: "Convert any PRD's acceptance criteria into a live card on this board."
+      },
+      {
+        cmd: "/spec-plan <name>",
+        desc: "Draft plan, specifications, and tasks for a new feature or change."
+      },
+      {
+        cmd: "/spec-build <name>",
+        desc: "Implement tasks: test-first (RED -> GREEN), zero stubs, and atomic [JOB_ID] commits."
+      },
+      {
+        cmd: "/spec-review <name>",
+        desc: "Verify quality gates: zero stubs, passing tests, and British English spelling."
+      },
+      {
+        cmd: "/spec-archive <name>",
+        desc: "Archive a completed change from the board and mark it finished."
+      }
+    ];
+    commands.forEach(({ cmd, desc }) => {
+      const item = document.createElement("div");
+      item.style.padding = "8px 10px";
+      item.style.background = "var(--oc-elevated, #1d2226)";
+      item.style.borderRadius = "6px";
+      item.style.border = "1px solid var(--oc-border, #30363c)";
+      const code = document.createElement("code");
+      code.style.fontFamily = "var(--oc-mono, monospace)";
+      code.style.fontWeight = "600";
+      code.style.color = "var(--oc-primary-text, #97c8bb)";
+      code.textContent = cmd;
+      const text2 = document.createElement("div");
+      text2.style.marginTop = "3px";
+      text2.style.color = "var(--oc-fg, #e6edf3)";
+      text2.textContent = desc;
+      item.append(code, text2);
+      commandsList.append(item);
+    });
+    const workflowTitle = document.createElement("h3");
+    workflowTitle.style.fontSize = "14px";
+    workflowTitle.style.margin = "16px 0 8px";
+    workflowTitle.textContent = "The 4 Board Columns";
+    const workflowText = document.createElement("div");
+    workflowText.style.fontSize = "12.5px";
+    workflowText.style.color = "var(--oc-muted, #a0a9b1)";
+    workflowText.style.lineHeight = "1.5";
+    workflowText.innerHTML = `
+    <strong>1. Planning:</strong> Feature logged, needs task checklist. Click <em>Plan</em>.<br/>
+    <strong>2. Ready:</strong> Plan and tasks agreed. Click <em>Build</em>.<br/>
+    <strong>3. In Progress:</strong> AI implementing test-first tasks.<br/>
+    <strong>4. Complete:</strong> All tasks green. Click <em>Review</em> then <em>Archive</em>.
+  `;
+    const footer = document.createElement("div");
+    footer.style.display = "flex";
+    footer.style.alignItems = "center";
+    footer.style.justifyContent = "space-between";
+    footer.style.marginTop = "20px";
+    footer.style.paddingTop = "12px";
+    footer.style.borderTop = "1px solid var(--oc-border, #30363c)";
+    const setupSlot = document.createElement("span");
+    let setupBtn = null;
+    if (callbacks.setup) {
+      setupBtn = mountButton(setupSlot, {
+        label: "Initialise OpenSpec (Set-up)",
+        variant: "secondary",
+        size: "sm",
+        onClick: () => {
+          close();
+          callbacks.setup?.();
+        }
+      });
+    }
+    const closeSlot = document.createElement("span");
+    const closeBtn = mountButton(closeSlot, {
+      label: "Close",
+      size: "sm",
+      onClick: close
+    });
+    footer.append(setupSlot, closeSlot);
+    function close() {
+      dialog.close();
+    }
+    dialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      close();
+    });
+    dialog.append(heading, intro, commandsTitle, commandsList, workflowTitle, workflowText, footer);
+    root2.append(dialog);
+    return {
+      open() {
+        setupBtn?.update({ disabled: callbacks.canSetup ? !callbacks.canSetup() : true });
+        dialog.showModal();
+      },
+      update() {
+        setupBtn?.update({ disabled: callbacks.canSetup ? !callbacks.canSetup() : true });
+      },
+      dispose() {
+        closeBtn.dispose();
+        setupBtn?.dispose();
+        dialog.remove();
+      }
+    };
+  }
+
   // src/panel/controller.ts
   function mountController(host2, appRoot) {
     const client = createClient(host2);
@@ -7605,15 +7753,8 @@ Review the implementation against the specifications and tasks for ${target}. Ru
         loadBoard(true, true);
       }
     });
-    async function openHelp() {
-      try {
-        await host2.openUrl("https://openspec.dev/docs/quickstart");
-      } catch (caught) {
-        await host2.toast({
-          kind: "error",
-          message: caught instanceof HostRequestError ? caught.message : "Cannot open quickstart"
-        });
-      }
+    function openHelp() {
+      guideDialog.open();
     }
     function canArchive() {
       return !!scope && !loading && !archivePending && changes.some((change) => change.stage === "complete" && !unavailableIds.has(change.id));
@@ -7695,13 +7836,17 @@ Review the implementation against the specifications and tasks for ${target}. Ru
         render();
       }
     }
+    const guideDialog = mountGuideDialog(appRoot, {
+      setup: () => void runSetup(),
+      canSetup: () => !scope && !!directory && !setupPending
+    });
     const boardView = mountBoardView(appRoot, {
       archive: () => archiveView.open(),
-      help: () => void openHelp(),
+      help: () => openHelp(),
+      guide: () => openHelp(),
       create: () => {
         if (scope) createView.open();
       },
-      setup: () => void runSetup(),
       retry: () => loadBoard(true),
       search: (value) => {
         search = value;
@@ -7890,6 +8035,7 @@ Review the implementation against the specifications and tasks for ${target}. Ru
       deleteView.dispose();
       createView.dispose();
       archiveView.dispose();
+      guideDialog.dispose();
       detailRoot.remove();
     };
   }

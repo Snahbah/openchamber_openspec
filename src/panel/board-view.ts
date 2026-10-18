@@ -37,7 +37,7 @@ export function mountBoardView(
   callbacks: {
     create: () => void;
     archive: () => void;
-    setup: () => void;
+    guide: () => void;
     retry: () => void;
     search: (value: string) => void;
     help: () => void;
@@ -63,15 +63,15 @@ export function mountBoardView(
     onClick: callbacks.create,
   });
   addButtonIcon(newChangeRoot, "create");
-  const setupRoot = document.createElement("span");
-  const setup = mountButton(setupRoot, {
-    label: "Set-up",
+  const guideRoot = document.createElement("span");
+  const guide = mountButton(guideRoot, {
+    label: "Guide",
     variant: "secondary",
     size: "sm",
-    disabled: true,
-    onClick: callbacks.setup,
+    disabled: false,
+    onClick: callbacks.guide,
   });
-  addButtonIcon(setupRoot, "setup");
+  addButtonIcon(guideRoot, "guide");
   const archiveRoot = document.createElement("span");
   const archive = mountButton(archiveRoot, {
     label: "Archive all",
@@ -98,7 +98,7 @@ export function mountBoardView(
   addButtonIcon(refreshRoot, "refresh");
   const helpRoot = document.createElement("span");
   const help = mountHelpButton(helpRoot, callbacks.help);
-  headingActions.append(helpRoot, refreshRoot, archiveRoot, setupRoot, newChangeRoot);
+  headingActions.append(helpRoot, refreshRoot, archiveRoot, guideRoot, newChangeRoot);
   const searchRoot = document.createElement("span");
   searchRoot.className = "board-search";
   let searchValue = "";
@@ -251,7 +251,7 @@ export function mountBoardView(
       project.textContent =
         state.directory?.split("/").filter(Boolean).at(-1) ?? "No project selected";
       newChange.update({ disabled: !state.canCreate });
-      setup.update({ disabled: !state.directory || !!state.setupPending, loading: !!state.setupPending });
+      guide.update({ disabled: false });
       archive.update({ disabled: !state.canArchive, loading: state.archivePending });
       if (searchValue !== state.search) {
         searchValue = state.search;
@@ -354,6 +354,7 @@ export function mountBoardView(
       }
       cards.clear();
       newChange.dispose();
+      guide.dispose();
       archive.dispose();
       refresh.dispose();
       help.dispose();
